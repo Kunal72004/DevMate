@@ -23,6 +23,8 @@ export const signup = async (req, res) => {
       email: user.email,
     });
   } catch (error) {
+    console.log(error);
+
     res.status(500).json({ message: "Signup Failed", error: error.message });
   }
 };
@@ -35,36 +37,48 @@ export const login = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
+    console.log("User found in DB:", user); 
 
-    if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ message: "Invalid Email or Password" });
+    if (!user) {
+      console.log("Reason: No user with this email");
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const isMatch = await user.comparePassword(password);
+
+    if (!isMatch) {
+      console.log("Reason: Password did not match");
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     generateToken(res, user._id);
-    res
-      .status(200)
-      .json({
-        message: "Login Successfully",
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-      });
+    res.status(200).json({
+      message: "Login Successfully",
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+    });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: "Login failed", error: error.message });
   }
 };
 
+export const logout = (req, res) => {
+  try {
+    res.cookie("token", "", { httpOnly: true, expires: new Date(0) });
+    res.status(200).json({ message: "Logged out Successfully" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Logout failed", error: error.message });
+  }
+};
 
-export const logout =(req,res)=>{
-        res.cookie("token","",{httpOnly:true,expires:new Date(0)});
-        res.status(200).json({message:"Logged out Successfully"}); 
-}
-
-export const getUser = async(req,res)=>{
-    try {
-        const user = await User.findById(req.userId).select("-password");
-        res.status(200).json({message:"user fetched successfully",user})
-    } catch (error) {
-        res.status(500).json({message:"Error in fetching user"});
-    }
-}
+export const getUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select("-password");
+    res.status(200).json({ message: "user fetched successfully", user });
+  } catch (error) {
+    res.status(500).json({ message: "Error in fetching user" });
+  }
+};
